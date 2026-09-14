@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Voxora — Raster Min–Max Normalizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700;800;850&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e17;--panel:#171522;--panel2:#1e1a2e;--line:#2f2a45;
+  --text:#f5f3fa;--muted:#a79fc7;--accent:#8b5cf6;--accent2:#5b3fa0;
+  --good:#c4b5fd;--danger:#ff7676;--radius:20px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  --display:"Space Grotesk",var(--sans);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+.wrap{width:min(1180px,calc(100% - 28px));margin:auto}
+header{border-bottom:1px solid var(--line);background:#0f0e17f2;position:sticky;top:0;z-index:20;backdrop-filter:blur(12px)}
+.nav{height:68px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:850;font-family:var(--display);letter-spacing:-.01em}
+.logo{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,#a78bfa,#6d28d9);font-weight:700;font-family:var(--display);transform:rotate(-6deg)}
+.navlinks{display:flex;gap:24px;color:var(--muted);font-size:13px}
+.navlinks a{color:inherit;text-decoration:none}
+.pill{font:700 10px var(--mono);color:#c9c2e6;border:1px solid var(--line);background:#1a1626;border-radius:99px;padding:9px 12px}
+.hero{padding:58px 0 34px}
+.eyebrow{font:700 11px var(--mono);letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(38px,6vw,68px);line-height:.98;letter-spacing:-.03em;margin:14px 0 8px}
+.hero h1 span{color:#7e8d88}
+.lead{max-width:760px;color:var(--muted);line-height:1.65;font-size:15px}
+.hero-row{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:24px}
+.local{font:700 10px var(--mono);padding:9px 12px;border:1px solid #3a3260;border-radius:99px;background:#1a1626}
+.local:before{content:"";display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;margin-right:7px}
+.app{display:grid;grid-template-columns:315px 1fr;gap:18px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 10px 35px #0004}
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.step-title{display:flex;gap:9px;align-items:flex-start}
+.num{font:700 10px var(--mono);color:var(--accent);background:#0d2824;border:1px solid #16453e;padding:5px 7px;border-radius:7px}
+.step-title strong{font-size:14px}.step-title small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.tabs{display:flex;gap:4px;overflow:auto;padding:4px;background:#171325;border:1px solid var(--line);border-radius:11px}
+.tab{white-space:nowrap;border:0;background:transparent;color:var(--muted);padding:9px 12px;border-radius:8px;font-size:11px}
+.tab.active{background:#241d3d;color:#fff;box-shadow:inset 0 0 0 1px #4c3f78}
+.mode{display:grid;grid-template-columns:1fr 1fr;background:#141026;border:1px solid var(--line);border-radius:9px;padding:3px}
+.mode button{border:0;background:transparent;color:var(--muted);padding:9px 5px;border-radius:7px;font-size:10px}
+.mode button.active{background:var(--accent2);color:#fff}
+.drop{margin-top:10px;border:1.5px dashed #4c3f78;border-radius:12px;min-height:122px;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;position:relative;background:#1c1730}
+.drop.drag{border-color:var(--accent);background:#241d3d}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop .up{font-size:25px;color:var(--accent);margin-bottom:7px}.drop strong{display:block;font-size:12px}.drop span{display:block;color:var(--muted);font-size:9px;margin-top:4px}
+.btn{border:1px solid var(--line);background:#241f38;color:#fff;border-radius:9px;padding:10px 12px;font-size:11px;font-weight:800}
+.btn.primary{background:linear-gradient(135deg,#8b5cf6,#6425c9);border-color:#9d6ffb}
+.btn.full{width:100%;margin-top:10px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.status{font:10px var(--mono);color:var(--muted);min-height:14px;margin-top:8px}
+.field{margin-top:16px}.label{font-size:10px;color:#b6afd6;margin-bottom:7px}.help{font-size:9px;color:#7d75a0;line-height:1.5;margin-top:6px}
+.range-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.range-row input,.lookup input,.grid-input,.precision{width:100%;background:#181428;border:1px solid var(--line);color:#fff;border-radius:8px;padding:10px;font:12px var(--mono)}
+.range-row label{font-size:8px;color:var(--muted);display:block;margin-bottom:4px}
+.stats{display:flex;flex-direction:column;gap:8px}.stat{display:flex;align-items:center;gap:8px;font:10px var(--mono);color:var(--muted)}.bar{height:4px;background:#2a2447;border-radius:99px;flex:1;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}.stat b{color:#e4defb;min-width:85px;text-align:right}
+.main{min-width:0}
+.panel-title{display:flex;justify-content:space-between;gap:12px;align-items:start}.panel-title h2{font-size:17px;margin:4px 0}.panel-title p{font-size:10px;color:var(--muted);margin:0;line-height:1.5}
+.viewer{margin-top:14px;min-height:430px;background:#12101c;border:1px solid var(--line);border-radius:13px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+#compareWrap{position:relative;line-height:0;max-width:100%;max-height:72vh}
+#sourceCanvas,#normCanvas{max-width:100%;height:auto;display:block}
+#normCanvas{position:absolute;left:0;top:0;width:100%;height:100%;clip-path:inset(0 0 0 50%)}
+.divider{position:absolute;top:0;bottom:0;left:50%;width:2px;background:white;z-index:5;cursor:ew-resize}
+.divider:after{content:"↔";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;color:#111;border-radius:50%;width:28px;height:28px;display:grid;place-items:center;font-size:13px}
+.tag{position:absolute;top:9px;z-index:7;background:#0b1110dd;border:1px solid #ffffff2b;border-radius:6px;padding:5px 7px;font:9px var(--mono)}
+.tag.left{left:9px}.tag.right{right:9px}
+.empty-note{color:var(--muted);font-size:12px;text-align:center;padding:30px}
+.empty-note b{color:#fff}
+.grid-card{margin-top:14px}.grid-head{display:flex;justify-content:space-between;align-items:start;gap:12px}.grid-head h3{margin:3px 0;font-size:15px}.grid-head p{margin:0;color:var(--muted);font-size:10px}
+.grid-scroll{overflow:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:720px;font:9px var(--mono)}
+th,td{border:1px solid #3a3260;padding:6px 5px;text-align:center;white-space:nowrap}
+th{background:#211b34;color:#c9c2e6;font-weight:800}
+td.source{background:#241d3d;color:#ece7fb}
+td.norm{background:#2a2050;color:#d9c8ff}
+td:nth-child(2n).source{background:#2c2447}
+td:nth-child(2n).norm{background:#332a58}
+.grid-caption{display:flex;gap:15px;flex-wrap:wrap;color:var(--muted);font-size:9px;margin-top:9px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}.dot.s{background:#c4b5fd}.dot.n{background:#8b5cf6}
+.lookup{margin-top:14px}.lookup-row{display:grid;grid-template-columns:1fr 90px;gap:8px;margin-top:8px}.lookup output{display:grid;place-items:center;background:#241d3d;border:1px solid #5b3fa0;border-radius:8px;color:var(--good);font:800 12px var(--mono)}
+.formula-card{margin-top:14px}.formula{font:800 17px var(--mono);background:#0d1413;border:1px solid var(--line);border-radius:10px;padding:15px;overflow:auto}.formula-note{color:var(--muted);font-size:10px;line-height:1.6;margin-top:8px}
+.histograms{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.hist{border:1px solid var(--line);border-radius:10px;padding:9px}.hist h4{font:10px var(--mono);margin:0 0 5px}.hist canvas{width:100%;height:65px;display:block}
+.custom{margin-top:26px}.custom textarea{min-height:150px;resize:vertical}
+.custom-grid{display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:end}.custom-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.notice{font:10px var(--mono);color:var(--muted);margin-top:8px}
+footer{border-top:1px solid var(--line);margin-top:40px;padding:22px 0 35px;color:#847bab;font-size:10px;display:flex;justify-content:space-between}
+.hidden{display:none!important}
+@media(max-width:900px){.app{grid-template-columns:1fr}.navlinks{display:none}.hero{padding-top:40px}.viewer{min-height:330px}}
+@media(max-width:600px){.wrap{width:min(100% - 18px,1180px)}h1{font-size:42px}.hero-row{align-items:flex-start;flex-direction:column}.histograms{grid-template-columns:1fr}.custom-grid{grid-template-columns:1fr}.viewer{min-height:280px}.card{padding:14px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="brand"><span class="logo">VX</span><span>Voxora</span></div>
+    <div class="navlinks">
+      <a href="#tool">Normalizer</a><a href="#grid">Value grid</a><a href="#formula">Formula</a><a href="#custom">Custom grid</a>
+    </div>
+    <div class="pill">LOCAL · 8-BIT RASTER</div>
+  </div>
+</header>
+
+<main class="wrap">
+<section class="hero">
+  <div class="eyebrow">GIS / RASTER TOOLKIT</div>
+  <h1>Stretch raster values<br><span>into a clean 0–1 scale.</span></h1>
+  <p class="lead">Drop in an image or type out a raster grid by hand, run every cell through the standard min–max formula, and see the exact normalized output instantly.</p>
+  <div class="hero-row"><div class="local">Runs locally in your browser</div><div class="pill">Output: 0.000 → 1.000</div></div>
+</section>
+
+<section id="tool" class="app">
+<aside class="sidebar">
+  <div class="card">
+    <div class="step-title"><span class="num">01</span><div><strong>Choose your data</strong><small>Photo or custom raster grid</small></div></div>
+    <div class="mode" style="margin-top:14px">
+      <button id="photoMode" class="active">▧ Photo / image</button>
+      <button id="customMode">▦ Custom grid</button>
+    </div>
+    <div class="drop" id="dropzone">
+      <input id="fileInput" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.bmp,.gif">
+      <div><div class="up">↑</div><strong>Choose a raster image</strong><span>Tap to browse or drag & drop</span></div>
+    </div>
+    <div class="status" id="status"></div>
+    <button id="resetBtn" class="btn full" disabled>↻ Reset</button>
+  </div>
+
+  <div class="card">
+    <div class="step-title"><span class="num">02</span><div><strong>Normalization</strong><small>Define how values are stretched</small></div></div>
+    <div class="field">
+      <div class="label">Raster value used for image grid</div>
+      <div class="mode">
+        <button id="lumMode" class="active">Luminance</button>
+        <button id="rgbMode">RGB / channels</button>
+      </div>
+      <div class="help">Luminance uses Y = 0.299R + 0.587G + 0.114B. RGB mode normalizes each channel separately.</div>
+    </div>
+    <div class="field">
+      <div class="label">Stretch direction</div>
+      <div class="mode">
+        <button id="normalDir" class="active">Standard ↑</button>
+        <button id="inverseDir">Inverse ↓</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="label">Output range</div>
+      <div class="range-row">
+        <div><label>Minimum</label><input id="outMin" type="number" value="0" step="any"></div>
+        <div><label>Maximum</label><input id="outMax" type="number" value="1" step="any"></div>
+      </div>
+      <div class="help">For the requested standard normalization, keep Minimum = 0 and Maximum = 1.</div>
+    </div>
+    <button id="normalizeBtn" class="btn primary full" disabled>Normalize raster →</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button id="downloadPng" class="btn" disabled>↓ Download PNG</button>
+      <button id="downloadCsv" class="btn" disabled>↓ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step-title"><span class="num">03</span><div><strong>Source statistics</strong><small>Current raster range</small></div></div>
+    <div class="stats" style="margin-top:14px">
+      <div class="stat"><span>MIN</span><span class="bar"><i id="barMin" style="width:0%"></i></span><b id="minStat">—</b></div>
+      <div class="stat"><span>MAX</span><span class="bar"><i id="barMax" style="width:0%"></i></span><b id="maxStat">—</b></div>
+      <div class="stat"><span>CELLS</span><span class="bar"><i id="barCells" style="width:0%"></i></span><b id="cellsStat">—</b></div>
+    </div>
+  </div>
+</aside>
+
+<section class="main">
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-view="equation">ƒ Equation</button>
+    <button class="tab" data-view="compare">▣ Compare</button>
+    <button class="tab" data-view="grid">▦ Value grid</button>
+    <button class="tab" data-view="surface">◈ 3D surface</button>
+  </div>
+
+  <div id="view-equation" class="card">
+    <div class="panel-title"><div><div class="eyebrow">NORMALIZATION</div><h2>Min–max raster normalization</h2><p>Each raster value is transformed independently into the selected 0–1 range.</p></div><div class="pill" id="rangePill">No image</div></div>
+    <div class="formula" id="formula">X<sub>norm</sub> = (X − X<sub>min</sub>) / (X<sub>max</sub> − X<sub>min</sub>)</div>
+    <div class="formula-note">Example: if X = 100, Xmin = 50 and Xmax = 200, then Xnorm = (100 − 50) / (200 − 50) = 0.3333. The result is always constrained to 0–1 when the standard output range is selected.</div>
+    <div class="histograms">
+      <div class="hist"><h4>SOURCE · LUMINANCE</h4><canvas id="histSource"></canvas></div>
+      <div class="hist"><h4>NORMALIZED · 0–1</h4><canvas id="histNorm"></canvas></div>
+      <div class="hist"><h4>VALUE RANGE</h4><canvas id="histRange"></canvas></div>
+    </div>
+  </div>
+
+  <div id="view-compare" class="card hidden">
+    <div class="panel-title"><div><div class="eyebrow">VISUAL CHECK</div><h2>Before & after</h2><p>Compare the original raster with its normalized output.</p></div><div class="pill" id="imageSize">—</div></div>
+    <div class="viewer" id="viewer">
+      <div class="empty-note" id="emptyNote"><b>Drop or choose an image</b><br>After normalization, the source and normalized raster will appear here.</div>
+      <div id="compareWrap" class="hidden">
+        <canvas id="sourceCanvas"></canvas><canvas id="normCanvas"></canvas>
+        <div class="tag left">INPUT</div><div class="tag right">NORMALIZED</div><div class="divider" id="divider"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-grid" class="card hidden" id="grid">
+    <div class="grid-head"><div><div class="eyebrow">CELL ANALYSIS</div><h2 style="font-size:17px;margin:4px 0">Raster value grid</h2><p>Source values and their exact normalized equivalents.</p></div><button id="gridCsv" class="btn">↓ Export CSV</button></div>
+    <div id="gridContent" class="grid-scroll"><div class="empty-note">Upload an image and click <b>Normalize raster</b> to generate the grid.</div></div>
+    <div class="grid-caption"><span><i class="dot s"></i>Source raster value</span><span><i class="dot n"></i>Normalized value (0–1)</span><span id="gridSize">Preview resolution: —</span></div>
+  </div>
+
+  <div id="view-surface" class="card hidden">
+    <div class="panel-title"><div><div class="eyebrow">SPATIAL VIEW</div><h2>Interactive 3D surface</h2><p>Simple browser-rendered surface from normalized raster values.</p></div><div class="pill">0 → 1 height</div></div>
+    <div id="surface" style="margin-top:12px;height:420px;background:#12101c;border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:auto"></div>
+  </div>
+
+  <div class="card lookup">
+    <div class="eyebrow">QUICK CALCULATOR</div>
+    <h2 style="font-size:15px;margin:5px 0">Manual value lookup</h2>
+    <div class="lookup-row">
+      <input id="lookupInput" type="number" placeholder="Enter raw value">
+      <output id="lookupOutput">—</output>
+    </div>
+    <div class="help">Uses the same Xnorm = (X − Xmin) / (Xmax − Xmin) formula and the current source range.</div>
+  </div>
+</section>
+</section>
+
+<section id="custom" class="custom card">
+  <div class="panel-title"><div><div class="eyebrow">CUSTOM GRID</div><h2>Normalize your own raster values</h2><p>Paste rows of values separated by commas, spaces, or tabs. Every cell is normalized using the same formula.</p></div></div>
+  <div class="custom-grid" style="margin-top:14px">
+    <div><textarea id="customInput" class="grid-input" placeholder="Example:
+66, 77, 70, 84
+100, 76, 74, 96
+89, 114, 105, 103"></textarea></div>
+    <div>
+      <div class="label">Decimal places</div><input id="precision" class="precision" type="number" min="0" max="8" value="3">
+      <div class="custom-actions"><button id="sampleBtn" class="btn">Use sample</button><button id="normalizeCustom" class="btn primary">Normalize grid</button><button id="clearCustom" class="btn">Clear</button></div>
+    </div>
+  </div>
+  <div id="customStatus" class="notice"></div>
+  <div id="customResult" class="grid-scroll hidden"></div>
+</section>
+
+<section id="formula" class="formula-card card">
+  <div class="eyebrow">FORMULA REFERENCE</div>
+  <h2 style="font-size:17px;margin:4px 0">Standard min–max normalization</h2>
+  <div class="formula">X<sub>norm</sub> = (X − X<sub>min</sub>) / (X<sub>max</sub> − X<sub>min</sub>)</div>
+  <p class="formula-note">X = original raster value · Xmin = minimum raster value · Xmax = maximum raster value · Xnorm = normalized value. With output range 0–1, the minimum becomes 0 and the maximum becomes 1.</p>
+</section>
+</main>
+
+<footer class="wrap"><span>Voxora · Raster value analysis & min–max normalization</span><span>All calculations run locally in your browser.</span></footer>
+
+<script>
+(() => {
+"use strict";
+
+const $ = id => document.getElementById(id);
+const fileInput=$("fileInput"),dropzone=$("dropzone");
+const sourceCanvas=$("sourceCanvas"),normCanvas=$("normCanvas");
+const sourceCtx=sourceCanvas.getContext("2d",{willReadFrequently:true});
+const normCtx=normCanvas.getContext("2d");
+let sourceData=null, normalizedValues=null, normalizedImage=null;
+let width=0,height=0, minVal=0,maxVal=255;
+let useLuminance=true, inverse=false;
+let outputMin=0,outputMax=1;
+let fileBase="raster", dividerDrag=false, lastCSV="";
+
+function normalizeValue(x,xmin,xmax,outMin=0,outMax=1){
+  if(!Number.isFinite(x)) return outMin;
+  if(xmax===xmin) return outMin;
+  const t=Math.max(0,Math.min(1,(x-xmin)/(xmax-xmin)));
+  const q=inverse ? 1-t : t;
+  return outMin + q*(outMax-outMin);
+}
+
+function luminance(r,g,b){ return 0.299*r + 0.587*g + 0.114*b; }
+
+function setStatus(t,error=false){
+  const e=$("status"); e.textContent=t; e.style.color=error?"var(--danger)":"";
+}
+
+function imageFile(f){
+  return f && ((f.type&&f.type.startsWith("image/")) || /\.(png|jpe?g|webp|bmp|gif)$/i.test(f.name||""));
+}
+
+function loadFile(file){
+  if(!imageFile(file)){setStatus("Please choose an image file.",true);return;}
+  fileBase=(file.name||"raster").replace(/\.[^.]+$/,"")||"raster";
+  setStatus("Loading "+(file.name||"image")+"…");
+  const url=URL.createObjectURL(file), img=new Image();
+  img.onload=()=>{URL.revokeObjectURL(url);readImage(img);};
+  img.onerror=()=>{URL.revokeObjectURL(url);setStatus("Image could not be decoded. Try JPG or PNG.",true);};
+  img.src=url;
+}
+
+fileInput.addEventListener("change",e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+["dragenter","dragover"].forEach(t=>dropzone.addEventListener(t,e=>{
+  e.preventDefault();e.stopPropagation();dropzone.classList.add("drag");
+}));
+["dragleave","dragend"].forEach(t=>dropzone.addEventListener(t,e=>{
+  e.preventDefault();dropzone.classList.remove("drag");
+}));
+dropzone.addEventListener("drop",e=>{
+  e.preventDefault();e.stopPropagation();dropzone.classList.remove("drag");
+  const f=e.dataTransfer.files[0]; if(f)loadFile(f);
+});
+["dragenter","dragover","dragleave","drop"].forEach(t=>document.addEventListener(t,e=>{
+  if(t==="drop" && dropzone.contains(e.target))return;
+  e.preventDefault();
+}));
+
+function readImage(img){
+  const max=1800, scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+  width=Math.max(1,Math.round(img.naturalWidth*scale));
+  height=Math.max(1,Math.round(img.naturalHeight*scale));
+  sourceCanvas.width=normCanvas.width=width;
+  sourceCanvas.height=normCanvas.height=height;
+  sourceCtx.clearRect(0,0,width,height);
+  sourceCtx.drawImage(img,0,0,width,height);
+  sourceData=sourceCtx.getImageData(0,0,width,height);
+  $("normalizeBtn").disabled=false;
+  $("resetBtn").disabled=false;
+  $("emptyNote").classList.add("hidden");
+  $("compareWrap").classList.remove("hidden");
+  $("imageSize").textContent=width+" × "+height;
+  $("rangePill").textContent="Loaded · "+width+"×"+height;
+  setStatus("Image loaded. Click “Normalize raster →”.");
+  calculateRange();
+}
+
+function valuesFromSource(){
+  const d=sourceData.data, vals=new Float32Array(width*height);
+  if(useLuminance){
+    for(let i=0,p=0;i<d.length;i+=4,p++) vals[p]=luminance(d[i],d[i+1],d[i+2]);
+  }else{
+    // RGB/channel mode: the grid uses the luminance equivalent for one scalar
+    // raster value, while the image output can still be normalized per channel.
+    for(let i=0,p=0;i<d.length;i+=4,p++) vals[p]=(d[i]+d[i+1]+d[i+2])/3;
+  }
+  return vals;
+}
+
+function calculateRange(){
+  if(!sourceData)return;
+  const vals=valuesFromSource();
+  let mn=Infinity,mx=-Infinity;
+  for(const v of vals){if(v<mn)mn=v;if(v>mx)mx=v;}
+  minVal=mn;maxVal=mx;
+  $("minStat").textContent=mn.toFixed(0);
+  $("maxStat").textContent=mx.toFixed(0);
+  $("cellsStat").textContent=(width*height).toLocaleString();
+  $("barMin").style.width=(mn/255*100)+"%";
+  $("barMax").style.width=(mx/255*100)+"%";
+  $("barCells").style.width="100%";
+  $("rangePill").textContent="Range "+mn.toFixed(0)+" → "+mx.toFixed(0);
+}
+
+function normalizeRaster(){
+  if(!sourceData)return;
+  outputMin=Number($("outMin").value); outputMax=Number($("outMax").value);
+  if(!Number.isFinite(outputMin)||!Number.isFinite(outputMax)||outputMax<=outputMin){
+    setStatus("Output maximum must be greater than output minimum.",true);return;
+  }
+  calculateRange();
+  const d=sourceData.data;
+  normalizedValues=new Float32Array(width*height);
+  normalizedImage=new ImageData(width,height);
+  const o=normalizedImage.data;
+
+  if(useLuminance){
+    for(let p=0,i=0;p<normalizedValues.length;p++,i+=4){
+      const x=luminance(d[i],d[i+1],d[i+2]);
+      const n=normalizeValue(x,minVal,maxVal,outputMin,outputMax);
+      normalizedValues[p]=n;
+      // Grayscale raster output: one normalized raster value per pixel.
+      const display=Math.round(Math.max(0,Math.min(1,(n-outputMin)/(outputMax-outputMin)))*255);
+      o[i]=o[i+1]=o[i+2]=display;o[i+3]=d[i+3];
+    }
+  }else{
+    // Channel-wise normalization, using one min/max per channel.
+    let rmin=255,rmax=0,gmin=255,gmax=0,bmin=255,bmax=0;
+    for(let i=0;i<d.length;i+=4){
+      rmin=Math.min(rmin,d[i]);rmax=Math.max(rmax,d[i]);
+      gmin=Math.min(gmin,d[i+1]);gmax=Math.max(gmax,d[i+1]);
+      bmin=Math.min(bmin,d[i+2]);bmax=Math.max(bmax,d[i+2]);
+    }
+    for(let p=0,i=0;p<normalizedValues.length;p++,i+=4){
+      const nr=normalizeValue(d[i],rmin,rmax,outputMin,outputMax);
+      const ng=normalizeValue(d[i+1],gmin,gmax,outputMin,outputMax);
+      const nb=normalizeValue(d[i+2],bmin,bmax,outputMin,outputMax);
+      normalizedValues[p]=(nr+ng+nb)/3;
+      o[i]=Math.round((nr-outputMin)/(outputMax-outputMin)*255);
+      o[i+1]=Math.round((ng-outputMin)/(outputMax-outputMin)*255);
+      o[i+2]=Math.round((nb-outputMin)/(outputMax-outputMin)*255);
+      o[i+3]=d[i+3];
+    }
+  }
+
+  normCtx.putImageData(normalizedImage,0,0);
+  $("downloadPng").disabled=false;$("downloadCsv").disabled=false;
+  buildGrid();buildHistograms();buildSurface();
+  setStatus("Normalization complete — every pixel value was calculated with the min–max formula.");
+  showView("grid");
+}
+
+function buildGrid(){
+  const box=$("gridContent");
+  const rows=Math.min(10,height),cols=Math.min(10,width);
+  const rs=Math.max(1,Math.floor(height/rows)),cs=Math.max(1,Math.floor(width/cols));
+  let s='<table><thead><tr><th>Pixel</th>';
+  for(let c=0;c<cols;c++)s+=`<th>P${c+1}</th>`;
+  s+="</tr></thead><tbody>";
+  for(let r=0;r<rows;r++){
+    s+=`<tr><th>R${r+1}</th>`;
+    const y=Math.min(height-1,r*rs);
+    for(let c=0;c<cols;c++){
+      const x=Math.min(width-1,c*cs),p=y*width+x;
+      const src=normalizedSourceValueAt(x,y);
+      const n=normalizedValues[p];
+      s+=`<td class="source">${formatSource(src)}</td><td class="norm">${n.toFixed(3)}</td>`;
+    }
+    s+="</tr>";
+  }
+  s+="</tbody></table>";
+  box.innerHTML=s;
+  $("gridSize").textContent=`Preview resolution: ${rows} × ${cols} · each cell shows Source → Normalized`;
+  lastCSV=makeCSV(rows,cols,rs,cs);
+}
+
+function normalizedSourceValueAt(x,y){
+  const i=(y*width+x)*4,d=sourceData.data;
+  return useLuminance?luminance(d[i],d[i+1],d[i+2]):(d[i]+d[i+1]+d[i+2])/3;
+}
+function formatSource(v){return Math.round(v);}
+function makeCSV(rows,cols,rs,cs){
+  let s="row,col,source_value,normalized_value\\n";
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const x=Math.min(width-1,c*cs),y=Math.min(height-1,r*rs),p=y*width+x;
+    s+=`${r+1},${c+1},${formatSource(normalizedSourceValueAt(x,y))},${normalizedValues[p].toFixed(6)}\\n`;
+  }
+  return s;
+}
+
+function downloadBlob(blob,name){
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+$("downloadPng").addEventListener("click",()=>{if(normalizedImage)normCanvas.toBlob(b=>downloadBlob(b,fileBase+"-normalized-0-to-1.png"),"image/png");});
+$("downloadCsv").addEventListener("click",()=>downloadBlob(new Blob([lastCSV],{type:"text/csv"}),fileBase+"-normalized-values.csv"));
+$("gridCsv").addEventListener("click",()=>{if(lastCSV)downloadBlob(new Blob([lastCSV],{type:"text/csv"}),fileBase+"-normalized-values.csv");});
+
+$("normalizeBtn").addEventListener("click",normalizeRaster);
+
+$("resetBtn").addEventListener("click",()=>{
+  sourceData=null;normalizedValues=null;normalizedImage=null;
+  $("normalizeBtn").disabled=true;$("resetBtn").disabled=true;$("downloadPng").disabled=true;$("downloadCsv").disabled=true;
+  $("compareWrap").classList.add("hidden");$("emptyNote").classList.remove("hidden");
+  $("gridContent").innerHTML='<div class="empty-note">Upload an image and click <b>Normalize raster</b> to generate the grid.</div>';
+  $("surface").innerHTML="";$("rangePill").textContent="No image";$("imageSize").textContent="—";
+  $("minStat").textContent=$("maxStat").textContent=$("cellsStat").textContent="—";
+  $("status").textContent="";fileInput.value="";
+});
+
+$("lumMode").addEventListener("click",()=>{useLuminance=true;$("lumMode").classList.add("active");$("rgbMode").classList.remove("active");if(sourceData){calculateRange();if(normalizedValues)normalizeRaster();}});
+$("rgbMode").addEventListener("click",()=>{useLuminance=false;$("rgbMode").classList.add("active");$("lumMode").classList.remove("active");if(sourceData){calculateRange();if(normalizedValues)normalizeRaster();}});
+$("normalDir").addEventListener("click",()=>{inverse=false;$("normalDir").classList.add("active");$("inverseDir").classList.remove("active");if(normalizedValues)normalizeRaster();});
+$("inverseDir").addEventListener("click",()=>{inverse=true;$("inverseDir").classList.add("active");$("normalDir").classList.remove("active");if(normalizedValues)normalizeRaster();});
+
+$("lookupInput").addEventListener("input",()=>{
+  const x=Number($("lookupInput").value);
+  $("lookupOutput").textContent=(sourceData&&Number.isFinite(x))?normalizeValue(x,minVal,maxVal,outputMin,outputMax).toFixed(6):"—";
+});
+
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>showView(t.dataset.view)));
+function showView(name){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
+  ["equation","compare","grid","surface"].forEach(v=>$("view-"+v).classList.toggle("hidden",v!==name));
+  if(name==="surface"&&normalizedValues)buildSurface();
+}
+
+let dividerPct=50;
+$("divider").addEventListener("pointerdown",e=>{dividerDrag=true;$("divider").setPointerCapture?.(e.pointerId);});
+window.addEventListener("pointermove",e=>{
+  if(!dividerDrag)return;
+  const rect=$("compareWrap").getBoundingClientRect();
+  dividerPct=Math.max(0,Math.min(100,(e.clientX-rect.left)/rect.width*100));
+  $("normCanvas").style.clipPath=`inset(0 0 0 ${dividerPct}%)`;
+  $("divider").style.left=dividerPct+"%";
+});
+window.addEventListener("pointerup",()=>dividerDrag=false);
+
+function drawHist(canvas,arr,scale){
+  const ctx=canvas.getContext("2d"),w=canvas.width=canvas.clientWidth*2,h=canvas.height=canvas.clientHeight*2;
+  ctx.clearRect(0,0,w,h);let bins=new Array(40).fill(0);
+  for(const v of arr){let q=Math.max(0,Math.min(39,Math.floor(v/scale*40)));bins[q]++;}
+  const mx=Math.max(1,...bins);
+  ctx.beginPath();
+  bins.forEach((v,i)=>{const x=i/39*w,y=h-(v/mx)*(h-5);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.strokeStyle="#a78bfa";ctx.lineWidth=3;ctx.stroke();
+}
+function buildHistograms(){
+  const vals=valuesFromSource(),norm=normalizedValues;
+  drawHist($("histSource"),vals,255);drawHist($("histNorm"),norm,Math.max(1,outputMax));drawHist($("histRange"),[minVal,maxVal],255);
+}
+
+function buildSurface(){
+  const box=$("surface");box.innerHTML="";
+  if(!normalizedValues)return;
+  const rows=Math.min(12,height),cols=Math.min(12,width);
+  const rs=Math.max(1,Math.floor(height/rows)),cs=Math.max(1,Math.floor(width/cols));
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 600 420");svg.setAttribute("width","100%");svg.setAttribute("height","100%");
+  const baseX=300,baseY=65,cellW=24,cellH=12,depth=70;
+  for(let r=rows-1;r>=0;r--)for(let c=0;c<cols;c++){
+    const p=Math.min(height-1,r*rs)*width+Math.min(width-1,c*cs);
+    const n=Math.max(0,Math.min(1,(normalizedValues[p]-outputMin)/(outputMax-outputMin)));
+    const x=baseX+(c-r)*cellW/2,y=baseY+(c+r)*cellH/2-n*depth;
+    const ptsTop=`${x},${y} ${x+cellW/2},${y+cellH/2} ${x},${y+cellH} ${x-cellW/2},${y+cellH/2}`;
+    const left=`${x-cellW/2},${y+cellH/2} ${x},${y+cellH} ${x},${y+cellH+n*depth} ${x-cellW/2},${y+cellH/2+n*depth}`;
+    const right=`${x+cellW/2},${y+cellH/2} ${x},${y+cellH} ${x},${y+cellH+n*depth} ${x+cellW/2},${y+cellH/2+n*depth}`;
+    [["polygon",ptsTop,"#2c8f82"],["polygon",left,"#17655d"],["polygon",right,"#0e4e48"]].forEach(a=>{
+      const el=document.createElementNS("http://www.w3.org/2000/svg",a[0]);el.setAttribute("points",a[1]);el.setAttribute("fill",a[2]);el.setAttribute("stroke","#0a2723");el.setAttribute("stroke-width","1");svg.appendChild(el);
+    });
+  }
+  box.appendChild(svg);
+}
+
+// Custom grid
+function parseCustom(){
+  const text=$("customInput").value.trim();
+  if(!text)throw new Error("Enter some raster values first.");
+  const rows=text.split(/\r?\n/).filter(Boolean).map(line=>line.trim().split(/[,\s;]+/).filter(Boolean).map(Number));
+  const cols=rows[0].length;
+  if(!cols||rows.some(r=>r.length!==cols))throw new Error("Every row must have the same number of values.");
+  if(rows.some(r=>r.some(v=>!Number.isFinite(v))))throw new Error("All cells must be numeric.");
+  return rows;
+}
+function normalizeCustom(){
+  try{
+    const g=parseCustom(),flat=g.flat(),mn=Math.min(...flat),mx=Math.max(...flat),prec=Math.max(0,Math.min(8,Number($("precision").value)||3));
+    let s="<table><thead><tr><th>Row / Col</th>";
+    for(let c=0;c<g[0].length;c++)s+=`<th>C${c+1}</th>`;
+    s+="</tr></thead><tbody>";
+    g.forEach((row,r)=>{s+=`<tr><th>R${r+1}</th>`;row.forEach(v=>s+=`<td class="source">${v}</td><td class="norm">${normalizeValue(v,mn,mx,0,1).toFixed(prec)}</td>`);s+="</tr>";});
+    s+="</tbody></table>";
+    $("customResult").innerHTML=s;$("customResult").classList.remove("hidden");
+    $("customStatus").textContent=`Input range: ${mn} → ${mx} · Output range: 0 → 1 · ${g.length} × ${g[0].length} cells`;
+  }catch(e){$("customStatus").textContent="⚠ "+e.message;$("customResult").classList.add("hidden");}
+}
+$("normalizeCustom").addEventListener("click",normalizeCustom);
+$("sampleBtn").addEventListener("click",()=>{$("customInput").value="66,77,70,84,91,103\n100,76,74,96,103,105\n89,114,105,103,110,92\n72,91,118,107,99,84";normalizeCustom();});
+$("clearCustom").addEventListener("click",()=>{$("customInput").value="";$("customResult").classList.add("hidden");$("customStatus").textContent="";});
+
+})();
+</script>
+</body>
+</html>
